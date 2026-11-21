@@ -1,0 +1,125 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+
+// Structure to represent an edge
+typedef struct {
+    int u, v, weight, original_index;
+} Edge;
+
+// Find function for DSU with path compression
+int find(int parent[], int i) {
+    if (parent[i] == i)
+        return i;
+    return parent[i] = find(parent, parent[i]);
+}
+
+// Union function for DSU by rank
+void unionSets(int parent[], int rank[], int x, int y) {
+    int rootX = find(parent, x);
+    int rootY = find(parent, y);
+    if (rootX != rootY) {
+        if (rank[rootX] < rank[rootY])
+            parent[rootX] = rootY;
+        else if (rank[rootX] > rank[rootY])
+            parent[rootY] = rootX;
+        else {
+            parent[rootY] = rootX;
+            rank[rootX]++;
+        }
+    }
+}
+
+// Comparison function for sorting edges by weight, with tie-breaking by original row-wise index
+int compareEdges(const void *a, const void *b) {
+    Edge *e1 = (Edge *)a;
+    Edge *e2 = (Edge *)b;
+    if (e1->weight != e2->weight)
+        return e1->weight - e2->weight;
+    return e1->original_index - e2->original_index;
+}
+
+void kruskalMST(int **cost, int V) {
+    int maxEdges = V * (V - 1) / 2;
+    Edge *edges = (Edge *)malloc(maxEdges * sizeof(Edge));
+    int edgeCount = 0;
+
+    // Step 1: Collect all valid edges from the upper triangular matrix
+    int index = 0;
+    for (int i = 0; i < V; i++) {
+        for (int j = i + 1; j < V; j++) {
+            if (cost[i][j] != 9999) { // 9999 indicates no edge
+                edges[edgeCount].u = i;
+                edges[edgeCount].v = j;
+                edges[edgeCount].weight = cost[i][j];
+                edges[edgeCount].original_index = index++;
+                edgeCount++;
+            }
+        }
+    }
+
+    // Step 2: Sort edges in ascending order of weights (with stable tie-breaking)
+    qsort(edges, edgeCount, sizeof(Edge), compareEdges);
+
+    // Step 3: Initialize Disjoint Set Union (DSU) structures
+    int *parent = (int *)malloc(V * sizeof(int));
+    int *rank = (int *)malloc(V * sizeof(int));
+    for (int i = 0; i < V; i++) {
+        parent[i] = i;
+        rank[i] = 0;
+    }
+
+    int mstCount = 0;
+    int totalCost = 0;
+    int k = 0;
+
+    // Step 4: Process edges and build MST
+    for (int i = 0; i < edgeCount && mstCount < V - 1; i++) {
+        int u = edges[i].u;
+        int v = edges[i].v;
+        int weight = edges[i].weight;
+
+        int rootU = find(parent, u);
+        int rootV = find(parent, v);
+
+        // If including this edge doesn't cause a cycle
+        if (rootU != rootV) {
+            printf("Edge %d:(%d, %d) cost:%d\n", k++, u, v, weight);
+            totalCost += weight;
+            unionSets(parent, rank, rootU, rootV);
+            mstCount++;
+        }
+    }
+
+    // Step 5: Print total minimum cost
+    printf("Minimum cost= %d\n", totalCost);
+
+    // Clean up allocated memory
+    free(edges);
+    free(parent);
+    free(rank);
+}
+
+
+int main() {
+    int V;
+    printf("No of vertices: ");
+    scanf("%d", &V);
+
+    int **cost = (int **)malloc(V * sizeof(int *));
+    for (int i = 0; i < V; i++)
+        cost[i] = (int *)malloc(V * sizeof(int));
+
+    printf("Adjacency matrix:\n");
+    for (int i = 0; i < V; i++)
+        for (int j = 0; j < V; j++)
+            scanf("%d", &cost[i][j]);
+
+    kruskalMST(cost, V);
+
+    for (int i = 0; i < V; i++)
+        free(cost[i]);
+    free(cost);
+
+    return 0;
+}
