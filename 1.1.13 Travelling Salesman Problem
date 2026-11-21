@@ -1,0 +1,96 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+
+#define INF (LLONG_MAX / 4)
+
+int n;
+long long **cost;
+long long **dp;
+
+long long tsp(int mask, int city) {
+    if (mask == (1 << n) - 1) {
+        if (cost[city][0] == -1)
+            return INF;
+        return cost[city][0];
+    }
+
+    if (dp[mask][city] != -1)
+        return dp[mask][city];
+
+    long long ans = INF;
+
+    for (int next = 0; next < n; next++) {
+        if (!(mask & (1 << next)) && cost[city][next] != -1) {
+            long long remaining = tsp(mask | (1 << next), next);
+
+            if (remaining != INF) {
+                long long total = cost[city][next] + remaining;
+                if (total < ans)
+                    ans = total;
+            }
+        }
+    }
+
+    return dp[mask][city] = ans;
+}
+
+int main(void) {
+    if (scanf("%d", &n) != 1 || n <= 0 || n >= 31)
+        return 0;
+
+    int states = 1 << n;
+
+    cost = (long long **)malloc(n * sizeof(long long *));
+    dp = (long long **)malloc(states * sizeof(long long *));
+
+    if (cost == NULL || dp == NULL)
+        return 1;
+
+    for (int i = 0; i < n; i++) {
+        cost[i] = (long long *)malloc(n * sizeof(long long));
+        if (cost[i] == NULL)
+            return 1;
+    }
+
+    for (int mask = 0; mask < states; mask++) {
+        dp[mask] = (long long *)malloc(n * sizeof(long long));
+        if (dp[mask] == NULL)
+            return 1;
+    }
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if (scanf("%lld", &cost[i][j]) != 1)
+                return 1;
+        }
+    }
+
+    for (int mask = 0; mask < states; mask++) {
+        for (int j = 0; j < n; j++) {
+            dp[mask][j] = -1;
+        }
+    }
+
+    if (n == 1) {
+        printf("0\n");
+    } else {
+        long long answer = tsp(1, 0);
+
+        if (answer == INF)
+            printf("-1\n");
+        else
+            printf("%lld\n", answer);
+    }
+
+    for (int i = 0; i < n; i++)
+        free(cost[i]);
+
+    for (int mask = 0; mask < states; mask++)
+        free(dp[mask]);
+
+    free(cost);
+    free(dp);
+
+    return 0;
+}
